@@ -3,10 +3,17 @@ import pickle
 import numpy as np
 from datetime import datetime, timedelta
 import os
+import gdown
 
 app = Flask(__name__)
 
-with open("model_artifacts.pkl", "rb") as f:
+MODEL_PATH = "model_artifacts.pkl"
+
+if not os.path.exists(MODEL_PATH):
+    url = "https://drive.google.com/file/d/1ZGaAqK2USdynKr4HaqNvFEvwCOj9PIR4/view?usp=drive_link"
+    gdown.download(url, MODEL_PATH, quiet=False)
+
+with open(MODEL_PATH, "rb") as f:
     artifacts = pickle.load(f)
 
 model = artifacts["model"]
