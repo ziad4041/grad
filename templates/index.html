@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Egyptian Railway Delay Predictor</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #09090f;
+      --panel: rgba(18, 18, 26, 0.88);
+      --panel-2: rgba(26, 26, 38, 0.96);
+      --border: rgba(255, 255, 255, 0.08);
+      --text: #ececf7;
+      --muted: #8b8ba8;
+      --accent: #6c63ff;
+      --accent-2: #ff6584;
+      --good: #21d19f;
+      --warn: #f6c344;
+      --bad: #ff6584;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body {
+      font-family: 'DM Mono', monospace;
+      background:
+        radial-gradient(circle at top, rgba(108, 99, 255, 0.18), transparent 34%),
+        radial-gradient(circle at bottom right, rgba(255, 101, 132, 0.14), transparent 30%),
+        linear-gradient(180deg, #09090f 0%, #0f1020 100%);
+      color: var(--text);
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 44px 44px;
+      pointer-events: none;
+      opacity: 0.35;
+    }
+
+    .wrap {
+      position: relative;
+      z-index: 1;
+      width: min(1100px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 40px 0 64px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 24px;
+      align-items: stretch;
+    }
+
+    .intro, .card {
+      backdrop-filter: blur(16px);
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      box-shadow: 0 20px 80px rgba(0,0,0,0.35);
+    }
+
+    .intro {
+      padding: 34px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .badge {
+      display: inline-flex;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(108, 99, 255, 0.26);
+      color: #cfcaff;
+      background: rgba(108, 99, 255, 0.1);
+      font-size: 12px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      line-height: 0.95;
+      font-size: clamp(2.7rem, 6vw, 5.2rem);
+      margin: 22px 0 16px;
+      letter-spacing: -0.04em;
+      max-width: 12ch;
+    }
+
+    .gradient-text {
+      background: linear-gradient(135deg, #ffffff 0%, #9c93ff 45%, #ff87a0 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      font-size: 15px;
+      line-height: 1.8;
+      color: var(--muted);
+      max-width: 60ch;
+      margin-bottom: 24px;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 24px;
+    }
+
+    .chip {
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.03);
+      color: #dedef6;
+      padding: 10px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .card {
+      padding: 28px;
+    }
+
+    .section-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 2.5px;
+      color: #b0b0cc;
+      margin-bottom: 18px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .field.full { grid-column: 1 / -1; }
+
+    label {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 1.8px;
+      text-transform: uppercase;
+    }
+
+    select, input {
+      appearance: none;
+      width: 100%;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      color: var(--text);
+      padding: 13px 14px;
+      font: inherit;
+      outline: none;
+      transition: 0.2s ease;
+    }
+
+    select:focus, input:focus {
+      border-color: rgba(108, 99, 255, 0.75);
+      box-shadow: 0 0 0 4px rgba(108, 99, 255, 0.14);
+    }
+
+    .divider {
+      grid-column: 1 / -1;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+      margin: 8px 0 2px;
+    }
+
+    .btn {
+      grid-column: 1 / -1;
+      border: 0;
+      border-radius: 18px;
+      padding: 15px 18px;
+      background: linear-gradient(135deg, var(--accent), #8d5cff);
+      color: white;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      letter-spacing: 1px;
+      font-size: 15px;
+      cursor: pointer;
+      transition: transform 0.15s ease, opacity 0.2s ease;
+      margin-top: 4px;
+    }
+
+    .btn:hover { transform: translateY(-1px); }
+    .btn:disabled { opacity: 0.7; cursor: wait; }
+
+    .status-box {
+      margin-top: 18px;
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.03);
+      padding: 18px;
+      display: none;
+    }
+
+    .status-box.show { display: block; }
+
+    .delay {
+      font-family: 'Syne', sans-serif;
+      font-size: 48px;
+      font-weight: 800;
+      line-height: 1;
+      margin: 8px 0 14px;
+    }
+
+    .meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .meta-item {
+      background: rgba(255,255,255,0.04);
+      border-radius: 14px;
+      padding: 12px;
+    }
+
+    .meta-label {
+      font-size: 10px;
+      letter-spacing: 1.8px;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .meta-value {
+      font-size: 15px;
+      color: #fff;
+    }
+
+    .status-note {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .status-box.good .delay { color: var(--good); }
+    .status-box.medium .delay { color: var(--warn); }
+    .status-box.bad .delay { color: var(--bad); }
+
+    .footer {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+    }
+
+    @media (max-width: 980px) {
+      .hero { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 640px) {
+      .wrap { width: min(100% - 18px, 1100px); padding-top: 18px; }
+      .intro, .card { border-radius: 22px; }
+      .intro, .card { padding: 22px; }
+      .grid, .meta { grid-template-columns: 1fr; }
+      h1 { max-width: none; }
+      .delay { font-size: 38px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <section class="intro">
+        <div class="badge">Egyptian National Railways</div>
+        <h1><span class="gradient-text">Train Delay</span><br/>Predictor</h1>
+        <p class="subtitle">
+          Estimate the arrival delay for your trip using the Railway model.
+          This frontend is connected directly to the Railway domain and calls the API endpoints there.
+        </p>
+        <div class="chips">
+          <span class="chip">API: <strong>https://grad.up.railway.app</strong></span>
+          <span class="chip">Endpoint: <strong>/predict</strong></span>
+          <span class="chip">Status: <strong>Live Frontend</strong></span>
+        </div>
+        <div class="chips" id="apiStatusChips" style="margin-top: 12px;"></div>
+      </section>
+
+      <section class="card">
+        <div class="section-title">Journey Details</div>
+        <form id="predictForm">
+          <div class="grid">
+            <div class="field">
+              <label>Train Number</label>
+              <select name="train_number" id="train_number" required></select>
+            </div>
+            <div class="field">
+              <label>Direction</label>
+              <select name="train_direction" id="train_direction" required>
+                <option value="up">Up (North)</option>
+                <option value="down">Down (South)</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label>From Station</label>
+              <select name="station_from" id="station_from" required></select>
+            </div>
+            <div class="field">
+              <label>To Station</label>
+              <select name="station_to" id="station_to" required></select>
+            </div>
+
+            <div class="field">
+              <label>Departure Time</label>
+              <input type="time" name="departure_time" value="08:00" required />
+            </div>
+            <div class="field">
+              <label>Scheduled Arrival</label>
+              <input type="time" name="arrival_time" value="12:00" required />
+            </div>
+
+            <div class="field">
+              <label>Month</label>
+              <select name="month" id="month" required></select>
+            </div>
+            <div class="field">
+              <label>Year</label>
+              <input type="number" name="year" value="2024" min="2020" max="2035" required />
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="field">
+              <label>Wind</label>
+              <select name="wind" id="wind" required></select>
+            </div>
+            <div class="field">
+              <label>Weather</label>
+              <select name="weather" id="weather" required></select>
+            </div>
+
+            <button class="btn" type="submit">PREDICT MY JOURNEY</button>
+          </div>
+        </form>
+
+        <div class="status-box" id="statusBox">
+          <div class="section-title" style="margin-bottom: 10px;">Prediction Result</div>
+          <div class="delay" id="delayValue">-</div>
+          <div class="meta">
+            <div class="meta-item">
+              <div class="meta-label">Scheduled Arrival</div>
+              <div class="meta-value" id="scheduledArrival">-</div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-label">Expected Arrival</div>
+              <div class="meta-value" id="expectedArrival">-</div>
+            </div>
+          </div>
+          <div class="status-note" id="statusNote"></div>
+        </div>
+      </section>
+    </div>
+
+    <div class="footer">
+      Connected to <strong>https://grad.up.railway.app</strong>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE_URL = "https://grad.up.railway.app";
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+    const placeholders = {
+      train_number: 'Choose train',
+      station_from: 'Choose station',
+      station_to: 'Choose station',
+      wind: 'Choose wind',
+      weather: 'Choose weather'
+    };
+
+    const state = {
+      stations: [],
+      trains: [],
+      winds: [],
+      weather: [],
+      months: []
+    };
+
+    function addOption(select, value, label = value) {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = label;
+      select.appendChild(option);
+    }
+
+    function fillSelect(id, items, placeholder, formatter = v => v) {
+      const select = document.getElementById(id);
+      select.innerHTML = '';
+      addOption(select, '', placeholder);
+      items.forEach(item => addOption(select, item, formatter(item)));
+      select.value = '';
+    }
+
+    function addMinutes(timeStr, mins) {
+      const [h, m] = timeStr.split(':').map(Number);
+      const total = h * 60 + m + Math.round(mins);
+      const nh = Math.floor(total / 60) % 24;
+      const nm = total % 60;
+      return `${String(nh).padStart(2, '0')}:${String(nm).padStart(2, '0')}`;
+    }
+
+    async function loadOptions() {
+      const [rootRes, stationsRes, trainsRes, optionsRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/`),
+        fetch(`${API_BASE_URL}/stations`),
+        fetch(`${API_BASE_URL}/trains`),
+        fetch(`${API_BASE_URL}/options`),
+      ]);
+
+      if (!stationsRes.ok || !trainsRes.ok || !optionsRes.ok) {
+        throw new Error('Failed to load API data');
+      }
+
+      const rootData = rootRes.ok ? await rootRes.json() : null;
+      const stationsData = await stationsRes.json();
+      const trainsData = await trainsRes.json();
+      const optionsData = await optionsRes.json();
+
+      state.stations = stationsData.stations || [];
+      state.trains = trainsData.trains || [];
+      state.winds = optionsData.wind_values || [];
+      state.weather = optionsData.weather_values || [];
+      state.months = optionsData.months || months;
+
+      fillSelect('train_number', state.trains, placeholders.train_number);
+      fillSelect('station_from', state.stations, placeholders.station_from);
+      fillSelect('station_to', state.stations, placeholders.station_to);
+      fillSelect('wind', state.winds, placeholders.wind);
+      fillSelect('weather', state.weather, placeholders.weather);
+
+      const monthSelect = document.getElementById('month');
+      monthSelect.innerHTML = '';
+      addOption(monthSelect, '', 'Choose month');
+      state.months.forEach((m, index) => addOption(monthSelect, String(index + 1), m));
+      monthSelect.value = '';
+
+      const statusChips = document.getElementById('apiStatusChips');
+      statusChips.innerHTML = '';
+      addOptionToChips(statusChips, rootData?.message || 'API online');
+      addOptionToChips(statusChips, rootData?.version ? `v${rootData.version}` : 'v1.0');
+    }
+
+    function addOptionToChips(container, text) {
+      const chip = document.createElement('span');
+      chip.className = 'chip';
+      chip.textContent = text;
+      container.appendChild(chip);
+    }
+
+    function validateForm(data) {
+      const required = [
+        'train_number', 'train_direction', 'station_from', 'station_to',
+        'departure_time', 'arrival_time', 'month', 'year', 'wind', 'weather'
+      ];
+      for (const key of required) {
+        if (!data[key]) return `Missing field: ${key}`;
+      }
+      return null;
+    }
+
+    document.getElementById('predictForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const btn = form.querySelector('.btn');
+      const statusBox = document.getElementById('statusBox');
+      const delayValue = document.getElementById('delayValue');
+      const scheduledArrival = document.getElementById('scheduledArrival');
+      const expectedArrival = document.getElementById('expectedArrival');
+      const statusNote = document.getElementById('statusNote');
+
+      const payload = Object.fromEntries(new FormData(form).entries());
+      const error = validateForm(payload);
+      if (error) {
+        statusBox.className = 'status-box bad show';
+        statusBox.style.display = 'block';
+        delayValue.textContent = 'Error';
+        statusNote.textContent = error;
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'PREDICTING...';
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/predict`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        statusBox.style.display = 'block';
+        statusBox.className = 'status-box';
+
+        if (!res.ok || data.error) {
+          statusBox.classList.add('bad');
+          delayValue.textContent = 'Error';
+          statusNote.textContent = data.error || 'Failed to get prediction';
+          return;
+        }
+
+        const delay = Number(data.predicted_delay_minutes ?? 0);
+        const scheduled = data.scheduled_arrival || payload.arrival_time;
+        const expected = data.expected_arrival || addMinutes(scheduled, delay);
+
+        delayValue.textContent = `${delay} min`;
+        scheduledArrival.textContent = scheduled;
+        expectedArrival.textContent = expected;
+        statusNote.textContent = delay <= 5
+          ? 'On time - minimal delay expected.'
+          : delay <= 20
+            ? 'Moderate delay - plan accordingly.'
+            : 'Significant delay expected.';
+
+        statusBox.classList.add(delay <= 5 ? 'good' : delay <= 20 ? 'medium' : 'bad');
+      } catch (err) {
+        statusBox.style.display = 'block';
+        statusBox.className = 'status-box bad';
+        delayValue.textContent = 'Error';
+        statusNote.textContent = 'Could not connect to the Railway API.';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'PREDICT MY JOURNEY';
+      }
+    });
+
+    loadOptions().catch(() => {
+      const statusBox = document.getElementById('statusBox');
+      statusBox.style.display = 'block';
+      statusBox.className = 'status-box bad';
+      document.getElementById('delayValue').textContent = 'Error';
+      document.getElementById('statusNote').textContent = 'Could not load options from the Railway API.';
+    });
+  </script>
+</body>
+</html>
